@@ -403,5 +403,7 @@ __pycache__/
 .aws-sam
 samconfig.toml
 omnisharp.json
+.idea
+
 
 # End of https://www.gitignore.io/api/macos,linux,windows,sublimetext,dotsettings,visualstudio,visualstudiocode
