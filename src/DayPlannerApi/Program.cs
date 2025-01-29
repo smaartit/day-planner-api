@@ -1,8 +1,10 @@
+using System.Text;
 using System.Text.Json;
 using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
-
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 //Logger
@@ -15,6 +17,39 @@ builder.Services
     .AddControllers()
     .AddJsonOptions(options => { options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase; });
 
+// Configure JWT Authentication
+var cognitoRegion = "us-east-1";
+var userPoolId = "us-east-1_sPFxcSTJa"; 
+var issuer = $"https://cognito-idp.{cognitoRegion}.amazonaws.com/{userPoolId}";
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = issuer;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = issuer,  
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true
+        };
+        // Log token validation failures
+        // options.Events = new JwtBearerEvents
+        // {
+        //     OnAuthenticationFailed = context =>
+        //     {
+        //         Console.WriteLine($"Authentication failed: {context.Exception}");
+        //         return Task.CompletedTask;
+        //     },
+        //     OnTokenValidated = context =>
+        //     {
+        //         Console.WriteLine($"Token validated: {context.Principal?.Identity?.IsAuthenticated}");
+        //         return Task.CompletedTask;
+        //     }
+        // };
+    });
+
+builder.Services.AddAuthorization();
 builder.Services.AddSwaggerGen();
 
 string region = Environment.GetEnvironmentVariable("AWS_REGION") ?? RegionEndpoint.USEast2.SystemName;
@@ -33,12 +68,14 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:5173", // Local development
+                "http://localhost:5000",
                 "https://dayplanner.smaartit.com"
             )
             .AllowAnyHeader() // Allow any headers (e.g., Authorization)
             .AllowAnyMethod(); // Allow HTTP methods (GET, POST, PUT, DELETE, etc.)
     });
 });
+
 var app = builder.Build();
 
 // Enable Swagger only in Development environment
